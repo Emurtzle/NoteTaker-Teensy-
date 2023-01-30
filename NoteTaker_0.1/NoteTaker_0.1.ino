@@ -182,7 +182,7 @@ void printStatus() {
 
 void addChar(char c) {
   FullString[CursorIndex] = c;
-  setCursor(CursorIndex + 1);
+  setCursor((CursorIndex + 1));
   displayText();
   printStatus();
 }
@@ -190,6 +190,10 @@ void addChar(char c) {
 void backspace() {
   setCursor(CursorIndex - 1);
   FullString[CursorIndex] = 0;   // Set character to "empty"
+  if (MinIndex > 0) {
+    MinIndex -= 1;
+    MaxIndex -= 1;
+  }
   displayText();
   printStatus();
 }
@@ -231,7 +235,7 @@ void setCursor(int index) {
     CursorIndex = 0;
     MinIndex = 0;
     MaxIndex = CHARS_PER_ROW * NUM_ROWS;
-  } else if (index < MinIndex) {    // Cursor hits min bound
+  } else if (index <= MinIndex) {    // Cursor hits min bound
     CursorIndex = index;
     MinIndex = CursorIndex;
     MaxIndex = MinIndex + (CHARS_PER_ROW * NUM_ROWS);
@@ -239,32 +243,14 @@ void setCursor(int index) {
     CursorIndex = index;
     MaxIndex = CursorIndex;
     MinIndex = MaxIndex - (CHARS_PER_ROW * NUM_ROWS);
+  } else {
+    CursorIndex = index;
   }
-
-
-  // CursorIndex += move;
-  // if (CursorIndex < 0) {
-  //   CursorIndex = 0;
-  //   MinIndex = 0;
-  //   MaxIndex = CHARS_PER_ROW * NUM_ROWS;
-
-  // } else if (CursorIndex > MaxIndex) {
-  //   MaxIndex = CursorIndex + 10;
-  //   MinIndex = MaxIndex - (CHARS_PER_ROW * NUM_ROWS) + 10;
-  
-  // } else if (CursorIndex < MinIndex) {
-  //   MinIndex = CursorIndex - 10;
-  //   MaxIndex = MaxIndex - 10;
-  //   if (MinIndex < 0) {
-  //     MinIndex = 0;
-  //     MaxIndex = CHARS_PER_ROW * NUM_ROWS;
-  //   }
-  //   MaxIndex = MinIndex + (CHARS_PER_ROW * NUM_ROWS);
-  // }
 }
 
 // First max characters behind cursor
 void setWorkingString() {
+  // TODO: Possible bug with array bounds, cursor not lining up with MinIndex
   for (int i = MinIndex; i < MaxIndex; i++) {
     WorkingString[i - MinIndex] = FullString[i];
   }
