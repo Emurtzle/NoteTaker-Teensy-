@@ -21,19 +21,27 @@ NOTE Taker v0.1
 #define SPI_SPEED SD_SCK_MHZ(4)   // Change SPI_SPEED to SD_SCK_MHZ(50) for best performance.
 #define CHIP_SELECT_PIN 10    // Chip Select (CS) Pin
 
+char FILE_PREFIX[] = "Note_";
+char FILE_SUFFIX[] = ".txt";
+int FileCount = 0;
+
 //------------------------------------------------------------------------------
 #if SD_FAT_TYPE == 0
 SdFat sd;
 File file;
+File root;
 #elif SD_FAT_TYPE == 1
 SdFat32 sd;
 File32 file;
+File32 root;
 #elif SD_FAT_TYPE == 2
 SdExFat sd;
 ExFile file;
+ExFile root;
 #elif SD_FAT_TYPE == 3
 SdFs sd;
 FsFile file;
+FsFile root;
 #else  // SD_FAT_TYPE
 #error Invalid SD_FAT_TYPE
 #endif  // SD_FAT_TYPE
@@ -87,6 +95,22 @@ void setup() {
     }
   }
   Serial.println("SD CARD INITIALIZATION: Successful");
+
+  // Get existing file count for file names
+  if (!root.open("/")) {
+    Serial.println("Error opening root");
+  }
+
+  sd.ls("/");
+  while (file.openNext(&root, O_RDONLY)) {
+    if (!file.isHidden()) {
+      FileCount++;
+    }
+    file.close();
+  }
+
+  Serial.print("File Count: ");
+  Serial.println(FileCount);
 
   // Keyboard
   
@@ -153,13 +177,13 @@ void loop() {
 
   // TOPB2(dec 7, hex 07) ->> Save File 
   if (key.key == 7 && key.state == BBQ10Keyboard::StatePress) {
-    saveFile();
+    saveFile(false);
     return;
   }
 
   // TopB3(dec 18, hex 12) ->> Save File and Start New
   if (key.key == 18 && key.state == BBQ10Keyboard::StatePress) {
-    saveFileAndNew();
+    saveFile(true);
     return;
   }
 
@@ -199,11 +223,51 @@ void backspace() {
 }
 
 void saveFileAndNew() {
-
+  
 }
 
-void saveFile() {
+void saveFile(bool increment) {
+  String filename = String(FILE_PREFIX) + String(FileCount) + String(FILE_SUFFIX); 
+  int str_len = filename.length() + 1;
+  char charArray[str_len];
+  filename.toCharArray(charArray, str_len);
 
+  Serial.print("Attemptingt to save file: ");
+  Serial.println(filename);
+
+  // TODO: Save non null characters only
+  if (!file.open(charArray, O_WRONLY | O_CREAT)) {
+    Serial.println("Error creating file");
+  }
+
+  if (file.write(FullString, FULL_STRING_LENGTH) != sizeof(FullString)) {
+    Serial.println("Error writing file");
+  }
+
+  file.close();
+
+  if (increment == true)
+    FileCount++;
+
+  Serial.println("FILE SAVE: Successful");
+
+  display.clearDisplay();
+  display.setTextSize(TEXT_SCALE);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+
+  if (increment == true)
+    display.println(F("Saved and New File"));
+  else
+    display.println(F("Saved File!"));  // Display working String
+
+  display.display();
+  delay(1000);
+
+  if (increment == true)
+    clear();
+  else
+    displayText();
 }
 
 void startFileBrowser() {
